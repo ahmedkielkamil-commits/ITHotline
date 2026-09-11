@@ -1,0 +1,13 @@
+# Flask JSON API
+flask>=3.0.0
+flask-cors>=4.0.0
+pymysql>=1.1.0
+python-dotenv>=1.0.0
+bcrypt>=4.1.0
+PyJWT>=2.8.0
+rq>=1.16.0
+twilio>=9.0.0
+
+# Infrastructure (existing helpers)
+minio>=7.2.0
+redis>=5.0.0

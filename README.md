@@ -100,14 +100,42 @@ Point Twilio inbound webhook to `POST /twilio/inbound`. Providers reply `YES` to
 
 Both Expo apps use **JWT auth** with tokens stored in **expo-secure-store**.
 
-### API URL for physical devices
+### Remote testers (any network — ngrok)
 
-`localhost` will not work from a phone. Set your machine's LAN IP in each app:
+Remote users do **not** need to be on your Wi‑Fi. You need two tunnels: one for the Flask API and one for the Expo dev server (built into `--tunnel`).
+
+**Terminal 1 — API**
+```bash
+source .venv/bin/activate
+python app.py
+```
+
+**Terminal 2 — ngrok for Flask (port 5001)**
+```bash
+ngrok http 5001
+```
+
+**Terminal 3 — sync ngrok URL into all app `.env` files, then start Expo in tunnel mode**
+```bash
+python sync_ngrok.py
+cd businessSide && npm run start:remote   # or techSide
+```
+
+Share the **Expo QR code / link** from the terminal. Testers open it in **Expo Go** from anywhere.
+
+After each new ngrok session (URL changes), run `python sync_ngrok.py` again and restart Expo.
+
+**Admin panel over ngrok:** run `cd admin-panel && npm run dev`, then `ngrok http 5173` in another terminal. Open the ngrok URL in a browser; API calls use `VITE_NGROK_API_URL` from `sync_ngrok.py`.
+
+### Same Wi‑Fi only (local LAN)
+
+`localhost` will not work from a phone. Set your machine's LAN IP:
 
 ```bash
 cp businessSide/.env.example businessSide/.env
 cp techSide/.env.example techSide/.env
-# Edit EXPO_PUBLIC_API_URL=http://YOUR_LAN_IP:5001
+# EXPO_PUBLIC_USE_NGROK=false
+# EXPO_PUBLIC_API_URL=http://YOUR_LAN_IP:5001
 ```
 
 Restart Expo after changing `.env`.
@@ -127,8 +155,11 @@ New registrations get `status=pending` and see the pending-approval screen until
 ### Run apps
 
 ```bash
-cd businessSide && npm start   # or techSide
+cd businessSide && npm start          # same Wi‑Fi (LAN)
+cd businessSide && npm run start:remote   # remote testers (ngrok + tunnel)
 ```
+
+Same for `techSide`.
 
 ## Endpoints — business
 

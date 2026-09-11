@@ -1,0 +1,353 @@
+# Lakewood IT Hotline — API examples
+# Use with VS Code REST Client, or copy curl commands below.
+# Base URL — adjust if needed
+@baseUrl = http://localhost:5001
+@token = {{login.response.body.token}}
+
+### Health
+GET {{baseUrl}}/health
+
+### Auth me (business or provider JWT)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+
+### Register business (use for dev login — seed passwords are placeholders)
+# @name register
+POST {{baseUrl}}/auth/business/register
+Content-Type: application/json
+
+{
+  "name": "Rosa's Corner Market",
+  "email": "rosa.test@example.com",
+  "password": "password123",
+  "address": "123 Lakewood Ave SE, Atlanta, GA 30315",
+  "type": "market",
+  "lat": 33.7418,
+  "lng": -84.3852
+}
+
+### Login
+# @name login
+POST {{baseUrl}}/auth/business/login
+Content-Type: application/json
+
+{
+  "email": "rosa.test@example.com",
+  "password": "password123"
+}
+
+### Available providers near point
+GET {{baseUrl}}/providers/available/count?lat=33.753&lng=-84.390
+
+### Current business profile
+GET {{baseUrl}}/business/me
+Authorization: Bearer {{token}}
+
+### Update business profile
+PUT {{baseUrl}}/business/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Rosa's Corner Market",
+  "address": "123 Lakewood Ave SE, Atlanta, GA 30315"
+}
+
+### Create ticket (schedules escalation check via RQ)
+# @name createTicket
+POST {{baseUrl}}/tickets
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "pos",
+  "severity": "urgent",
+  "problemReport": "Register 2 keeps freezing during lunch rush. Screen goes white.",
+  "photoKeys": []
+}
+
+### List my tickets
+GET {{baseUrl}}/tickets/mine
+Authorization: Bearer {{token}}
+
+### Ticket detail (includes presigned photo URLs)
+@ticketId = {{createTicket.response.body.id}}
+GET {{baseUrl}}/tickets/{{ticketId}}
+Authorization: Bearer {{token}}
+
+### Upload photo to ticket (multipart)
+POST {{baseUrl}}/photos
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----Boundary
+
+------Boundary
+Content-Disposition: form-data; name="ticket_id"
+
+{{ticketId}}
+------Boundary
+Content-Disposition: form-data; name="upload_type"
+
+problem
+------Boundary
+Content-Disposition: form-data; name="file"; filename="problem.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/local/photo.jpg
+------Boundary--
+
+### List messages on ticket
+GET {{baseUrl}}/tickets/{{ticketId}}/messages
+Authorization: Bearer {{token}}
+
+### Post message (business)
+POST {{baseUrl}}/tickets/{{ticketId}}/messages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "content": "Can you come today? We're turning customers away."
+}
+
+### Cancel ticket (only before complete/confirmed)
+POST {{baseUrl}}/tickets/{{ticketId}}/cancel
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cancelReason": "Issue resolved internally"
+}
+
+### Confirm ticket (only when status=complete — set manually in DB for testing)
+POST {{baseUrl}}/tickets/6/confirm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "business_rating": 1
+}
+
+###
+# curl quick reference
+#
+# curl http://localhost:5001/health
+#
+# curl -X POST http://localhost:5001/auth/business/register \
+#   -H "Content-Type: application/json" \
+#   -d '{"name":"Test Shop","email":"test@example.com","password":"password123","address":"1 Main St","type":"market","lat":33.75,"lng":-84.39}'
+#
+# TOKEN=$(curl -s -X POST http://localhost:5001/auth/business/login \
+#   -H "Content-Type: application/json" \
+#   -d '{"email":"test@example.com","password":"password123"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+#
+# curl http://localhost:5001/business/me -H "Authorization: Bearer $TOKEN"
+#
+# curl "http://localhost:5001/providers/available/count?lat=33.753&lng=-84.390"
+#
+# curl -X POST http://localhost:5001/tickets \
+#   -H "Authorization: Bearer $TOKEN" \
+#   -H "Content-Type: application/json" \
+#   -d '{"type":"pos","severity":"urgent","problemReport":"Register frozen"}'
+
+# ============================================================
+# PROVIDER (IT worker) endpoints
+# ============================================================
+
+@providerToken = {{providerLogin.response.body.token}}
+@providerToken2 = {{providerLogin2.response.body.token}}
+
+### Register provider
+# @name providerRegister
+POST {{baseUrl}}/auth/provider/register
+Content-Type: application/json
+
+{
+  "fname": "Test",
+  "lname": "Tech",
+  "email": "tech.test@example.com",
+  "password": "password123",
+  "phone": "+14045559901",
+  "lat": 33.7495,
+  "lng": -84.3835,
+  "skills": ["pos", "network"],
+  "vouchedBy": "Rev. James Holloway",
+  "vouchedRelationship": "community referral"
+}
+
+### Provider login
+# @name providerLogin
+POST {{baseUrl}}/auth/provider/login
+Content-Type: application/json
+
+{
+  "email": "tech.test@example.com",
+  "password": "password123"
+}
+
+### Provider profile
+GET {{baseUrl}}/provider/me
+Authorization: Bearer {{providerToken}}
+
+### Update provider profile
+PUT {{baseUrl}}/provider/me
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "service_radius_m": 10000,
+  "skills": ["pos", "network", "equipment"]
+}
+
+### Turn on availability ("taking calls")
+PUT {{baseUrl}}/provider/availability
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "availability": true,
+  "avail_start_time": "08:00",
+  "avail_end_time": "18:00"
+}
+
+### List open tickets near provider
+GET {{baseUrl}}/tickets/open?lat=33.753&lng=-84.390
+Authorization: Bearer {{providerToken}}
+
+### View open ticket detail (before claim)
+GET {{baseUrl}}/tickets/{{ticketId}}
+Authorization: Bearer {{providerToken}}
+
+### Claim ticket (atomic)
+POST {{baseUrl}}/tickets/{{ticketId}}/claim
+Authorization: Bearer {{providerToken}}
+
+### Update journey status — en route
+POST {{baseUrl}}/tickets/{{ticketId}}/status
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "status": "en_route"
+}
+
+### Update journey status — on site
+POST {{baseUrl}}/tickets/{{ticketId}}/status
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "status": "on_site"
+}
+
+### Provider message
+POST {{baseUrl}}/tickets/{{ticketId}}/messages
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "content": "On site now — checking the register."
+}
+
+### Complete ticket (provider close-out)
+POST {{baseUrl}}/tickets/{{ticketId}}/complete
+Authorization: Bearer {{providerToken}}
+Content-Type: application/json
+
+{
+  "completionReport": "Replaced failing USB hub and updated drivers.",
+  "amount_charged": 125.00,
+  "provider_rating": 1,
+  "parts": "USB hub",
+  "apprenticeAssisted": true,
+  "apprenticeName": "Jordan Lee"
+}
+
+### Upload completion photo (provider)
+POST {{baseUrl}}/photos
+Authorization: Bearer {{providerToken}}
+Content-Type: multipart/form-data; boundary=----Boundary2
+
+------Boundary2
+Content-Disposition: form-data; name="ticket_id"
+
+{{ticketId}}
+------Boundary2
+Content-Disposition: form-data; name="upload_type"
+
+completion
+------Boundary2
+Content-Disposition: form-data; name="file"; filename="done.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/local/photo.jpg
+------Boundary2--
+
+### Twilio inbound webhook (simulate YES reply)
+POST {{baseUrl}}/twilio/inbound
+Content-Type: application/x-www-form-urlencoded
+
+From=%2B14045550103&Body=YES
+
+# ============================================================
+# CLAIM RACE TEST — only one provider should win (409 for loser)
+# Run from shell after creating an open ticket:
+#
+#   # 1) Register + approve two providers in DB (status='approved', availability=1)
+#   # 2) Create open ticket as business → note TICKET_ID
+#   # 3) Run both claims in parallel:
+#
+#   TOKEN_A=$(curl -s -X POST http://localhost:5001/auth/provider/login \
+#     -H "Content-Type: application/json" \
+#     -d '{"email":"tech.a@example.com","password":"password123"}' \
+#     | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+#   TOKEN_B=$(curl -s -X POST http://localhost:5001/auth/provider/login \
+#     -H "Content-Type: application/json" \
+#     -d '{"email":"tech.b@example.com","password":"password123"}' \
+#     | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+#   TICKET_ID=1
+#   curl -s -o /tmp/claim_a.json -w "%{http_code}\n" -X POST \
+#     "http://localhost:5001/tickets/${TICKET_ID}/claim" \
+#     -H "Authorization: Bearer $TOKEN_A" &
+#   curl -s -o /tmp/claim_b.json -w "%{http_code}\n" -X POST \
+#     "http://localhost:5001/tickets/${TICKET_ID}/claim" \
+#     -H "Authorization: Bearer $TOKEN_B" &
+#   wait
+#   echo "A:" $(cat /tmp/claim_a.json)
+#   echo "B:" $(cat /tmp/claim_b.json)
+#   # Expect one 200 and one 409 with {"error":"already claimed"}
+# ============================================================
+
+### Register second provider (for race test setup)
+# @name providerRegister2
+POST {{baseUrl}}/auth/provider/register
+Content-Type: application/json
+
+{
+  "fname": "Race",
+  "lname": "TechB",
+  "email": "tech.b@example.com",
+  "password": "password123",
+  "phone": "+14045559902",
+  "lat": 33.7495,
+  "lng": -84.3835,
+  "skills": ["pos"]
+}
+
+### Second provider login
+# @name providerLogin2
+POST {{baseUrl}}/auth/provider/login
+Content-Type: application/json
+
+{
+  "email": "tech.b@example.com",
+  "password": "password123"
+}
+
+### Race claim — provider A (run A and B back-to-back quickly, or use shell script above)
+POST {{baseUrl}}/tickets/1/claim
+Authorization: Bearer {{providerToken}}
+
+### Race claim — provider B (expect 409 if A won)
+POST {{baseUrl}}/tickets/1/claim
+Authorization: Bearer {{providerToken2}}
+

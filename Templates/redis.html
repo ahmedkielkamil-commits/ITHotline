@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Redis Words{% endblock %}
+
+{% block content %}
+  <h1>redis words</h1>
+  <p class="sub">Type a word, store it in Redis, and manage everything on this page.</p>
+
+  <form method="post" action="{{ url_for('redis_add') }}">
+    <strong>Add a word</strong>
+    <input type="text" name="word" placeholder="Type a word..." required autofocus>
+    <button type="submit">Save to Redis</button>
+  </form>
+
+  <section>
+    <div class="section-header">
+      <strong>Stored words ({{ words|length }})</strong>
+      {% if words %}
+        <form method="post" action="{{ url_for('redis_clear') }}" onsubmit="return confirm('Delete all words from Redis? This cannot be undone.');">
+          <button type="submit" class="danger">Clear all</button>
+        </form>
+      {% endif %}
+    </div>
+    {% if words %}
+      <table>
+        <thead>
+          <tr>
+            <th>Word</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry_id, word in words.items() %}
+            <tr>
+              <td>{{ word }}</td>
+              <td>
+                <form class="inline-form" method="post" action="{{ url_for('redis_delete', entry_id=entry_id) }}">
+                  <button type="submit" class="danger small">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">No words yet. Add something above.</p>
+    {% endif %}
+  </section>
+{% endblock %}

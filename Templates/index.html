@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}MinIO Demo Bucket{% endblock %}
+
+{% block content %}
+  <h1>demo bucket</h1>
+  <p class="sub">Upload files to MinIO and browse everything stored in the bucket.</p>
+
+  <form method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data">
+    <strong>Upload a file</strong>
+    <input type="file" name="file" required>
+    <button type="submit">Upload</button>
+  </form>
+
+  <section>
+    <div class="section-header">
+      <strong>Objects in bucket ({{ objects|length }})</strong>
+      {% if objects %}
+        <form method="post" action="{{ url_for('clear') }}" onsubmit="return confirm('Delete all objects in the bucket? This cannot be undone.');">
+          <button type="submit" class="danger">Clear bucket</button>
+        </form>
+      {% endif %}
+    </div>
+    {% if objects %}
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Size</th>
+            <th>Last modified</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for obj in objects %}
+            <tr>
+              <td>{{ obj.object_name }}</td>
+              <td>{{ obj.size }} bytes</td>
+              <td>{{ obj.last_modified.strftime('%Y-%m-%d %H:%M:%S') if obj.last_modified else '-' }}</td>
+              <td><a href="{{ url_for('download', object_name=obj.object_name) }}">Download</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">No objects yet. Upload something above.</p>
+    {% endif %}
+  </section>
+{% endblock %}

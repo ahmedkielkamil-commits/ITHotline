@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}IThotline{% endblock %}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 0 1rem 2rem; color: #111; }
+    nav { display: flex; gap: 0.5rem; padding: 1rem 0; border-bottom: 1px solid #e5e5e5; margin-bottom: 1.5rem; }
+    nav a { text-decoration: none; color: #555; padding: 0.4rem 0.9rem; border-radius: 6px; font-weight: 500; }
+    nav a:hover { background: #f3f4f6; color: #111; }
+    nav a.active { background: #2563eb; color: white; }
+    h1 { margin-bottom: 0.25rem; }
+    p.sub { color: #555; margin-top: 0; }
+    form, section { background: #f6f6f6; border-radius: 8px; padding: 1rem 1.25rem; margin: 1.25rem 0; }
+    input[type=text], input[type=file] { margin: 0.5rem 0 1rem; display: block; width: 100%; padding: 0.5rem 0.65rem; border: 1px solid #ccc; border-radius: 6px; font: inherit; }
+    button { background: #2563eb; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font: inherit; }
+    button:hover { background: #1d4ed8; }
+    button.danger { background: #dc2626; }
+    button.danger:hover { background: #b91c1c; }
+    button.small { padding: 0.35rem 0.65rem; font-size: 0.85rem; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
+    th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #ddd; }
+    th { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: #666; }
+    .empty { color: #777; font-style: italic; }
+    .flash { background: #dcfce7; color: #166534; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
+    .flash.error { background: #fee2e2; color: #991b1b; }
+    a { color: #2563eb; }
+    .inline-form { display: inline; margin: 0; padding: 0; background: none; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="{{ url_for('index') }}" class="{% if active == 'minio' %}active{% endif %}">MinIO</a>
+    <a href="{{ url_for('redis_page') }}" class="{% if active == 'redis' %}active{% endif %}">Redis</a>
+  </nav>
+
+  {% if message %}
+    <div class="flash">{{ message }}</div>
+  {% endif %}
+  {% if error %}
+    <div class="flash error">{{ error }}</div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</body>
+</html>
